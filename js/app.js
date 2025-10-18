@@ -1,9 +1,30 @@
 /*
   app.js — Beige Book Explorer
-  --------------------------------
   Minimal vanilla JS som pratar med Open Librarys sök-API.
-  Fokus: clean kod, tydliga variabler, enkla kommentarer.
+  Fixar: JSDoc-typer, säkra parseInt, lugn linter.
 */
+
+/**
+ * @typedef {Object} SearchState
+ * @property {string} q
+ * @property {string} yearMin
+ * @property {string} yearMax
+ * @property {'relevance'|'new'|'old'} sort
+ * @property {number} page
+ * @property {number} numFound
+ */
+
+/**
+ * @typedef {Object} OpenDoc
+ * @property {string=} title
+ * @property {string[]=} author_name
+ * @property {number=} first_publish_year
+ * @property {string[]=} subject
+ * @property {number=} cover_i
+ * @property {string=} key
+ * @property {number[]=} publish_year
+ * @property {number[]=} covers
+ */
 
 const els = {
   form: document.getElementById('search-form'),
@@ -22,6 +43,7 @@ const els = {
   tpl: document.getElementById('card-tpl'),
 };
 
+/** @type {SearchState} */
 let state = {
   q: '',
   yearMin: '',
@@ -38,7 +60,6 @@ let currentAbort = null;
 
 /* ----------------------------- helpers ----------------------------- */
 
-// Spara senaste sökningar (enkelt & lokalt)
 function saveRecent(query) {
   const q = (query || '').trim();
   if (!q) return;
@@ -104,7 +125,6 @@ async function fetchBooks() {
   const url = buildUrl({
     q: query || 'bestseller',
     page: state.page,
-    // limit finns i API:t — om det ignoreras är det ändå lugnt
     limit: 20,
   });
 
@@ -116,15 +136,18 @@ async function fetchBooks() {
       headers: { Accept: 'application/json' },
       signal: currentAbort.signal,
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
     const data = await res.json();
 
+    /** @type {OpenDoc[]} */
     let docs = data.docs || [];
 
     // Client-side filter på år (enkelt men funkar)
     if (state.yearMin || state.yearMax) {
-      const min = parseInt(state.yearMin, 10) || 0;
-      const max = parseInt(state.yearMax, 10) || 9999;
+      const min = parseInt(String(state.yearMin || ''), 10) || 0;
+      const max = parseInt(String(state.yearMax || ''), 10) || 9999;
       docs = docs.filter((d) => {
         const y = d.first_publish_year || (Array.isArray(d.publish_year) ? d.publish_year[0] : 0) || 0;
         return y >= min && y <= max;
@@ -144,7 +167,7 @@ async function fetchBooks() {
     renderGrid(docs);
     renderPager(data);
   } catch (err) {
-    if (err.name === 'AbortError') return; // helt normalt, vi avbröt bara
+    if (err.name === 'AbortError') return; // normalt, vi avbröt bara
     console.error(err);
     els.grid.innerHTML = `<p style="color:#8a5b4a">Kunde inte hämta böcker just nu. Testa igen strax.</p>`;
     els.pager.classList.add('hidden');
@@ -155,7 +178,7 @@ function showSkeletons(n = 10) {
   els.grid.innerHTML = '';
   for (let i = 0; i < n; i++) {
     const card = els.tpl.content.firstElementChild.cloneNode(true);
-    // låt .skeleton vara kvar, ingen bild-src = shimmer-effekt
+    // låt .skeleton vara kvar, ingen riktig bild-src än (placeholder finns)
     card.querySelector('.title').textContent = ' ';
     card.querySelector('.meta').textContent = ' ';
     els.grid.appendChild(card);
