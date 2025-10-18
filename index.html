@@ -1,33 +1,108 @@
 <!doctype html>
-<html class="no-js" lang="">
-
+<html lang="sv">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title></title>
-  <link rel="stylesheet" href="css/style.css">
-  <meta name="description" content="">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Beige Book Explorer — clean & pinterest vibe</title>
 
-  <meta property="og:title" content="">
-  <meta property="og:type" content="">
-  <meta property="og:url" content="">
-  <meta property="og:image" content="">
-  <meta property="og:image:alt" content="">
+  <!-- Google Fonts för clean it-girl känsla -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
 
-  <link rel="icon" href="/favicon.ico" sizes="any">
-  <link rel="icon" href="/icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="icon.png">
-
-  <link rel="manifest" href="site.webmanifest">
-  <meta name="theme-color" content="#fafafa">
+  <!-- Vår stilfil -->
+  <link rel="stylesheet" href="css/style.css" />
+  <meta name="description" content="Sök böcker via Open Library. Snygg beige design, vanilla JS." />
 </head>
-
 <body>
+<!-- Enkel, semantisk header -->
+<header class="site-header">
+  <div class="wrap">
+    <h1 class="brand"><span>Beige</span> Book Explorer</h1>
+    <p class="tagline">clean girl • it girl • pinterest vibes</p>
+  </div>
+</header>
 
-  <!-- Add your site or application content here -->
-  <p>Hello world! This is HTML5 Boilerplate.</p>
-  <script src="js/app.js"></script>
+<!-- Huvudinnehåll -->
+<main class="wrap">
+  <!-- Sök-kortet -->
+  <section class="search-card">
+    <form id="search-form" autocomplete="off">
+      <label class="field">
+        <span>Sök bok / författare</span>
+        <input id="q" type="search" placeholder="t.ex. harry potter, sally rooney, data science…" />
+      </label>
 
+      <div class="filters">
+        <label class="field-inline">
+          <span>Från år</span>
+          <input id="yearMin" type="number" inputmode="numeric" placeholder="1900" min="0" />
+        </label>
+        <label class="field-inline">
+          <span>Till år</span>
+          <input id="yearMax" type="number" inputmode="numeric" placeholder="2025" min="0" />
+        </label>
+        <label class="field-inline">
+          <span>Sortera</span>
+          <select id="sort">
+            <option value="relevance">Relevans</option>
+            <option value="new">Nyast först</option>
+            <option value="old">Äldst först</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-primary" type="submit">Sök</button>
+        <button class="btn btn-ghost" type="button" id="clearBtn">Rensa</button>
+      </div>
+
+      <!-- Senaste sökningar (localStorage) -->
+      <div class="recent" id="recent"></div>
+    </form>
+  </section>
+
+  <!-- Resultat -->
+  <section aria-live="polite" class="results">
+    <div id="stats" class="stats"></div>
+    <div id="grid" class="grid"></div>
+
+    <!-- Enkel pager -->
+    <div id="pager" class="pager hidden">
+      <button id="prev" class="btn" disabled>Föregående</button>
+      <span id="pageLabel" class="page-label">Sida 1</span>
+      <button id="next" class="btn">Nästa</button>
+    </div>
+  </section>
+</main>
+
+<!-- Footer -->
+<footer class="site-footer">
+  <div class="wrap">
+    <small>
+      Data från
+      <a href="https://openlibrary.org/" target="_blank" rel="noreferrer noopener">Open Library</a>.
+      Byggt i vanilla JS ✌️
+    </small>
+  </div>
+</footer>
+
+<!-- Mall för bok-kort -->
+<template id="card-tpl">
+  <article class="card">
+    <div class="cover-wrap skeleton">
+      <img alt="" loading="lazy" />
+    </div>
+    <div class="card-body">
+      <h3 class="title"></h3>
+      <p class="meta"></p>
+      <div class="chips"></div>
+      <a class="out" target="_blank" rel="noreferrer noopener">Visa på Open Library →</a>
+    </div>
+  </article>
+</template>
+
+<!-- Vår appkod (lägg i samma mapp) -->
+<script src="js/app.js" type="module" defer></script>
 </body>
-
 </html>
