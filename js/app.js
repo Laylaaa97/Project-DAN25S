@@ -1,313 +1,238 @@
-/*
-  app.js — Beige Book Explorer
-  Minimal vanilla JS som pratar med Open Librarys sök-API.
-  Fixar: JSDoc-typer, säkra parseInt, lugn linter.
-*/
+/* helpers */
+// Små hjälpmetoder som kör överallt
 
-/**
- * @typedef {Object} SearchState
- * @property {string} q
- * @property {string} yearMin
- * @property {string} yearMax
- * @property {'relevance'|'new'|'old'} sort
- * @property {number} page
- * @property {number} numFound
- */
-
-/**
- * @typedef {Object} OpenDoc
- * @property {string=} title
- * @property {string[]=} author_name
- * @property {number=} first_publish_year
- * @property {string[]=} subject
- * @property {number=} cover_i
- * @property {string=} key
- * @property {number[]=} publish_year
- * @property {number[]=} covers
- */
+function qs(sel, el = document) { return el.querySelector(sel); }
+function qsa(sel, el = document) { return [...el.querySelectorAll(sel)]; }
+function el(tag, cls) { const n = document.createElement(tag); if (cls) n.className = cls; return n; }
 
 const els = {
-  form: document.getElementById('search-form'),
-  q: document.getElementById('q'),
-  yearMin: document.getElementById('yearMin'),
-  yearMax: document.getElementById('yearMax'),
-  sort: document.getElementById('sort'),
-  clearBtn: document.getElementById('clearBtn'),
-  grid: document.getElementById('grid'),
-  stats: document.getElementById('stats'),
-  pager: document.getElementById('pager'),
-  prev: document.getElementById('prev'),
-  next: document.getElementById('next'),
-  pageLabel: document.getElementById('pageLabel'),
-  recent: document.getElementById('recent'),
-  tpl: document.getElementById('card-tpl'),
+  form: qs('#search-form'),
+  q: qs('#q'),
+  yearMin: qs('#yearMin'),
+  yearMax: qs('#yearMax'),
+  sort: qs('#sort'),
+  grid: qs('#grid'),
+  stats: qs('#stats'),
+  recent: qs('#recent'),
+  pager: qs('#pager'),
+  prev: qs('#prev'),
+  next: qs('#next'),
+  pageLabel: qs('#pageLabel'),
+  tpl: qs('#card-tpl')
 };
 
-/** @type {SearchState} */
-let state = {
+const state = {
+  page: 1,
   q: '',
   yearMin: '',
   yearMax: '',
-  sort: 'relevance',   // relevance | new | old
-  page: 1,             // Open Library page-param
+  sort: 'relevance',
+  hits: 0,
   numFound: 0,
+  lastAbort: null
 };
 
-const RECENT_KEY = 'bbe_recent_queries_v1';
+/* Open Library API */
+// Tiny wrapper för att hämta
 
-// AbortController så vi kan avbryta pågående fetch (race conditions)
-let currentAbort = null;
+const BASE = 'https://openlibrary.org/search.json';
 
-/* ----------------------------- helpers ----------------------------- */
+function buildQuery() {
+  const params = new URLSearchParams();
+  if (state.q) params.set('q', state.q);
+  if (state.yearMin) params.set('first_publish_year>=', state.yearMin);
+  if (state.yearMax) params.set('first_publish_year<=', state.yearMax);
 
-function saveRecent(query) {
-  const q = (query || '').trim();
+  params.set('page', String(state.page));
+  return `${BASE}?${params.toString()}`;
+}
+
+function coverUrl(d) {
+  if (d.cover_i) return `https://covers.openlibrary.org/b/id/${d.cover_i}-L.jpg`;
+  return '';
+}
+
+/* Fallback bild */
+
+function initials(text) {
+  const t = (text || '').trim();
+  if (!t) return '📚';
+  const words = t.split(/\s+/).slice(0, 2);
+  const letters = words.map(w => w[0]).join('').toUpperCase();
+  return letters || '📚';
+}
+
+function placeholderDataURI(title) {
+  const label = initials(title);
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='400' height='533' viewBox='0 0 400 533'>
+    <defs>
+      <linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>
+        <stop offset='0%' stop-color='#f4ece4'/>
+        <stop offset='100%' stop-color='#eadfd5'/>
+      </linearGradient>
+    </defs>
+    <rect width='100%' height='100%' fill='url(#g)'/>
+    <text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle'
+          font-family='Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif'
+          font-size='110' fill='#a08874'>${label}</text>
+  </svg>`;
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+}
+
+function setImageWithFallback(imgEl, src, title) {
+  const fallback = placeholderDataURI(title);
+  imgEl.onerror = () => {
+    imgEl.onerror = null;
+    imgEl.src = fallback;
+  };
+  imgEl.src = src || fallback;
+}
+
+/* recent searches */
+
+const RECENT_KEY = 'bb.recent';
+function saveRecent(q) {
   if (!q) return;
   const list = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
-  const next = [q, ...list.filter(x => x.toLowerCase() !== q.toLowerCase())].slice(0, 6);
+  const next = [q, ...list.filter(x => x !== q)].slice(0, 6);
   localStorage.setItem(RECENT_KEY, JSON.stringify(next));
-  renderRecent(next);
 }
-
-function loadRecent() {
+function renderRecent() {
   const list = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
-  renderRecent(list);
+  els.recent.innerHTML = list.map(q => `<button class="btn" data-recent="${q}">${q}</button>`).join('');
 }
 
-function renderRecent(list) {
-  els.recent.innerHTML = '';
-  list.forEach((q) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.textContent = q;
-    b.addEventListener('click', () => {
-      els.q.value = q;
-      state.page = 1;
-      doSearch();
-    });
-    els.recent.appendChild(b);
-  });
-}
-
-// Bygg URL till Open Library
-function buildUrl(params) {
-  const url = new URL('https://openlibrary.org/search.json');
-  Object.entries(params).forEach(([k, v]) => {
-    if (v !== '' && v !== undefined && v !== null) url.searchParams.set(k, v);
-  });
-  return url.toString();
-}
-
-function readStateFromUI() {
-  state.q = els.q.value;
-  state.yearMin = els.yearMin.value;
-  state.yearMax = els.yearMax.value;
-  state.sort = els.sort.value;
-}
-
-// Debounce = vänta lite medan man skriver så vi inte spammar API:t
-function debounce(fn, ms = 400) {
-  let t;
-  return (...args) => {
-    clearTimeout(t);
-    t = setTimeout(() => fn(...args), ms);
-  };
-}
-
-/* ----------------------------- fetch & render ----------------------------- */
-
-async function fetchBooks() {
-  // Avbryt ev. gammal förfrågan (om man klickar snabbt)
-  if (currentAbort) currentAbort.abort();
-  currentAbort = new AbortController();
-
-  const query = (state.q || '').trim();
-  const url = buildUrl({
-    q: query || 'bestseller',
-    page: state.page,
-    limit: 20,
-  });
-
-  // Visa skelettkort (känns snabbare och premium)
-  showSkeletons(12);
-
-  try {
-    const res = await fetch(url, {
-      headers: { Accept: 'application/json' },
-      signal: currentAbort.signal,
-    });
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
-    }
-    const data = await res.json();
-
-    /** @type {OpenDoc[]} */
-    let docs = data.docs || [];
-
-    // Client-side filter på år (enkelt men funkar)
-    if (state.yearMin || state.yearMax) {
-      const min = parseInt(String(state.yearMin || ''), 10) || 0;
-      const max = parseInt(String(state.yearMax || ''), 10) || 9999;
-      docs = docs.filter((d) => {
-        const y = d.first_publish_year || (Array.isArray(d.publish_year) ? d.publish_year[0] : 0) || 0;
-        return y >= min && y <= max;
-      });
-    }
-
-    // Sortering: relevance = låt API:ts ordning vara; annars sortera år
-    if (state.sort === 'new') {
-      docs.sort((a, b) => (b.first_publish_year || 0) - (a.first_publish_year || 0));
-    } else if (state.sort === 'old') {
-      docs.sort((a, b) => (a.first_publish_year || 0) - (b.first_publish_year || 0));
-    }
-
-    state.numFound = data.numFound || docs.length;
-
-    renderStats(state.numFound, query);
-    renderGrid(docs);
-    renderPager(data);
-  } catch (err) {
-    if (err.name === 'AbortError') return; // normalt, vi avbröt bara
-    console.error(err);
-    els.grid.innerHTML = `<p style="color:#8a5b4a">Kunde inte hämta böcker just nu. Testa igen strax.</p>`;
-    els.pager.classList.add('hidden');
+function renderStats() {
+  if (state.numFound === 0) {
+    els.stats.textContent = 'Inga träffar (än). Testa en annan sökning.';
+    return;
   }
-}
-
-function showSkeletons(n = 10) {
-  els.grid.innerHTML = '';
-  for (let i = 0; i < n; i++) {
-    const card = els.tpl.content.firstElementChild.cloneNode(true);
-    // låt .skeleton vara kvar, ingen riktig bild-src än (placeholder finns)
-    card.querySelector('.title').textContent = ' ';
-    card.querySelector('.meta').textContent = ' ';
-    els.grid.appendChild(card);
-  }
-}
-
-function renderStats(total, q) {
-  const suffix = q ? ` för "${q}"` : '';
-  els.stats.textContent = total ? `${total.toLocaleString('sv-SE')} träffar${suffix}` : '';
-}
-
-function coverUrl(doc) {
-  // Open Library cover-service
-  const id = doc.cover_i || (Array.isArray(doc.covers) && doc.covers[0]);
-  return id ? `https://covers.openlibrary.org/b/id/${id}-M.jpg` : '';
+  els.stats.textContent = `Visar ${state.hits} av ca ${state.numFound} träffar — sida ${state.page}`;
 }
 
 function renderGrid(docs) {
-  els.grid.innerHTML = '';
-  if (!docs.length) {
-    els.grid.innerHTML = `<p>Inga träffar. Testa ett annat sökord ✨</p>`;
-    return;
-  }
+  const frag = document.createDocumentFragment();
+  for (const d of docs) {
+    const node = els.tpl.content.cloneNode(true);
+    const card = node.querySelector('.card');
 
-  docs.forEach((d) => {
-    const card = els.tpl.content.firstElementChild.cloneNode(true);
+    // Titel + meta
+    const title = d.title || 'Okänd titel';
+    const authors = (d.author_name || []).join(', ');
+    const year = d.first_publish_year || '';
+    card.querySelector('.title').textContent = title;
+    card.querySelector('.meta').textContent = [authors, year].filter(Boolean).join(' • ');
 
-    // Titel
-    card.querySelector('.title').textContent = d.title || 'Okänd titel';
+    const chips = card.querySelector('.chips');
+    (d.language || []).slice(0, 3).forEach(lang => {
+      const c = el('span', 'chip'); c.textContent = lang.toUpperCase(); chips.appendChild(c);
+    });
 
-    // Författare + år
-    const authors = (d.author_name || []).slice(0, 2).join(', ');
-    const year = d.first_publish_year ? ` • ${d.first_publish_year}` : '';
-    card.querySelector('.meta').textContent = [authors, year].filter(Boolean).join('');
+    // Länk ut
+    const key = d.key || '';
+    const out = card.querySelector('.out');
+    out.href = key ? `https://openlibrary.org${key}` : '#';
 
     // Omslag
     const img = card.querySelector('img');
     const cu = coverUrl(d);
-    if (cu) {
-      img.src = cu;
-      img.alt = `Omslag till ${d.title || 'bok'}`;
-      card.querySelector('.cover-wrap').classList.remove('skeleton');
-    }
+    setImageWithFallback(img, cu, d.title || 'Bok');
+    const wrap = card.querySelector('.cover-wrap');
+    if (wrap) wrap.classList.remove('skeleton');
 
-    // Chips (ämnen / tags)
-    const chips = card.querySelector('.chips');
-    (d.subject || []).slice(0, 4).forEach((s) => {
-      const c = document.createElement('span');
-      c.className = 'chip';
-      c.textContent = s;
-      chips.appendChild(c);
-    });
-
-    // Länk ut
-    const key = d.key; // ex: "/works/OL12345W"
-    const out = card.querySelector('.out');
-    out.href = key ? `https://openlibrary.org${key}` : '#';
-
-    els.grid.appendChild(card);
-  });
+    frag.appendChild(node);
+  }
+  els.grid.innerHTML = '';
+  els.grid.appendChild(frag);
 }
 
-function renderPager(data) {
-  // hasPrev: om vi är på sida > 1
-  const hasPrev = state.page > 1;
-
-  // hasNext: om (start + antal) < numFound
-  const start = typeof data.start === 'number' ? data.start : (state.page - 1) * (data.docs?.length || 0);
-  const shown = data.docs?.length || 0;
-  const total = data.numFound || 0;
-  const hasNext = start + shown < total;
-
-  els.pager.classList.toggle('hidden', !(hasPrev || hasNext));
-  els.prev.disabled = !hasPrev;
-  els.next.disabled = !hasNext;
+function renderPager(hasMore) {
+  els.pager.classList.toggle('hidden', state.numFound <= 0);
+  els.prev.disabled = state.page <= 1;
+  els.next.disabled = !hasMore;
   els.pageLabel.textContent = `Sida ${state.page}`;
 }
 
-/* ----------------------------- events ----------------------------- */
+/* fetch + search */
+
+async function search() {
+  // Avbryt tidigare request om man spammar sök
+  if (state.lastAbort) state.lastAbort.abort();
+  const ctrl = new AbortController();
+  state.lastAbort = ctrl;
+
+  els.stats.textContent = 'Söker...';
+  els.grid.innerHTML = '';
+
+  try {
+    const res = await fetch(buildQuery(), { signal: ctrl.signal });
+    if (!res.ok) {
+      els.grid.innerHTML = `<p style="color:#8a5b4a">Kunde inte hämta böcker just nu. Kontrollera din internetanslutning och försök igen.</p>`;
+      els.stats.textContent = '';
+      return;
+    }
+    const data = await res.json();
+
+    const docs = data.docs || [];
+    state.numFound = data.numFound || docs.length;
+    state.hits = docs.length;
+
+    if (state.sort === 'new') docs.sort((a,b) => (b.first_publish_year||0) - (a.first_publish_year||0));
+    if (state.sort === 'old') docs.sort((a,b) => (a.first_publish_year||0) - (b.first_publish_year||0));
+
+    renderStats();
+    renderGrid(docs);
+    renderPager(Boolean(data.numFound > state.page * 100)); // OL returnerar 100 per sida
+  } catch (err) {
+    if (err.name === 'AbortError') return;
+    els.grid.innerHTML = `<p style="color:#8a5b4a">Kunde inte hämta böcker just nu. Kontrollera din internetanslutning och försök igen.</p>`;
+    els.stats.textContent = '';
+  }
+}
+
+/* events */
 
 els.form.addEventListener('submit', (e) => {
   e.preventDefault();
+  state.q = els.q.value.trim();
+  state.yearMin = els.yearMin.value.trim();
+  state.yearMax = els.yearMax.value.trim();
+  state.sort = els.sort.value;
   state.page = 1;
-  doSearch();
+  saveRecent(state.q);
+  search();
 });
 
-els.q.addEventListener('input', debounce(() => {
-  state.page = 1;
-  doSearch();
-}, 500));
-
-['yearMin', 'yearMax', 'sort'].forEach((id) => {
-  els[id].addEventListener('change', () => {
-    state.page = 1;
-    doSearch();
-  });
-});
-
-els.prev.addEventListener('click', () => {
-  if (state.page > 1) {
-    state.page -= 1;
-    fetchBooks();
-  }
-});
-
-els.next.addEventListener('click', () => {
-  state.page += 1;
-  fetchBooks();
-});
-
-els.clearBtn.addEventListener('click', () => {
+els.clearBtn?.addEventListener('click', () => {
+  // Rensa knapp för att snabbt börja om
   els.q.value = '';
   els.yearMin.value = '';
   els.yearMax.value = '';
   els.sort.value = 'relevance';
+  state.q = '';
+  state.yearMin = '';
+  state.yearMax = '';
+  state.sort = 'relevance';
   state.page = 1;
-  doSearch();
+  els.grid.innerHTML = '';
+  els.stats.textContent = '';
+  renderRecent();
+  els.q.focus();
 });
 
-/* ----------------------------- boot ----------------------------- */
+// Klick på senaste sökningar
+els.recent.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-recent]');
+  if (!btn) return;
+  els.q.value = btn.dataset.recent;
+  els.form.requestSubmit();
+});
 
-function doSearch() {
-  readStateFromUI();
-  saveRecent(state.q);
-  fetchBooks();
-}
+els.prev.addEventListener('click', () => { if (state.page > 1) { state.page--; search(); } });
+els.next.addEventListener('click', () => { state.page++; search(); });
 
-// Ladda senaste sökningar och gör en första query
-loadRecent();
-state.q = 'cozy fantasy'; // liten “vibe”-default
-els.q.value = state.q;
-fetchBooks();
+// Ladda upp senaste sökningar direkt
+renderRecent();
+
+state.q = 'harry potter';
+search();

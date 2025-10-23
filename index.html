@@ -5,49 +5,49 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Beige Book Explorer — clean & pinterest vibe</title>
 
-  <!-- Google Fonts för clean it-girl känsla -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
 
-  <!-- Vår stilfil -->
   <link rel="stylesheet" href="css/style.css" />
   <meta name="description" content="Sök böcker via Open Library. Snygg beige design, vanilla JS." />
 </head>
 <body>
-<!-- Enkel, semantisk header -->
-<header class="site-header">
+<noscript>
+  <div style="background:#fff3cd;color:#664d03;padding:12px;border-bottom:1px solid #ffe69c;text-align:center;">
+    Den här sidan kräver JavaScript för att fungera. Aktivera JavaScript och ladda om.
+  </div>
+</noscript>
+
+<header class="site-header" role="banner">
   <div class="wrap">
     <h1 class="brand"><span>Beige</span> Book Explorer</h1>
     <p class="tagline">clean girl • it girl • pinterest vibes</p>
   </div>
 </header>
 
-<!-- Huvudinnehåll -->
-<main class="wrap">
-  <!-- Sök-kortet -->
-  <section class="search-card">
+<main class="wrap" role="main">
+  <section class="search-card" aria-labelledby="search-title">
+    <h2 id="search-title" class="sr-only">Sök böcker</h2>
     <form id="search-form" autocomplete="off">
-      <label class="field">
+      <label class="field" for="q">
         <span>Sök bok / författare</span>
         <input id="q" type="search" placeholder="t.ex. harry potter, sally rooney, data science…" />
       </label>
 
       <div class="filters">
-        <label class="field-inline">
+        <label class="field-inline" for="yearMin">
           <span>Från år</span>
           <input id="yearMin" type="number" inputmode="numeric" placeholder="1900" min="0" />
         </label>
-        <label class="field-inline">
+        <label class="field-inline" for="yearMax">
           <span>Till år</span>
           <input id="yearMax" type="number" inputmode="numeric" placeholder="2025" min="0" />
         </label>
-        <label class="field-inline">
+        <label class="field-inline" for="sort">
           <span>Sortera</span>
-          <select id="sort">
-            <option value="relevance">Relevans</option>
-            <option value="new">Nyast först</option>
-            <option value="old">Äldst först</option>
+          <select id="sort" disabled>
+            <option value="relevance" selected>Relevans</option>
           </select>
         </label>
       </div>
@@ -57,18 +57,15 @@
         <button class="btn btn-ghost" type="button" id="clearBtn">Rensa</button>
       </div>
 
-      <!-- Senaste sökningar (localStorage) -->
-      <div class="recent" id="recent"></div>
+      <div class="recent" id="recent" aria-live="polite"></div>
     </form>
   </section>
 
-  <!-- Resultat -->
   <section aria-live="polite" class="results">
     <div id="stats" class="stats"></div>
     <div id="grid" class="grid"></div>
 
-    <!-- Enkel pager -->
-    <div id="pager" class="pager hidden">
+    <div id="pager" class="pager hidden" role="navigation" aria-label="Sidbläddring">
       <button id="prev" class="btn" disabled>Föregående</button>
       <span id="pageLabel" class="page-label">Sida 1</span>
       <button id="next" class="btn">Nästa</button>
@@ -76,27 +73,25 @@
   </section>
 </main>
 
-<!-- Footer -->
-<footer class="site-footer">
+<footer class="site-footer" role="contentinfo">
   <div class="wrap">
     <small>
       Data från
       <a href="https://openlibrary.org/" target="_blank" rel="noreferrer noopener">Open Library</a>.
       Byggt i vanilla JS ✌️
+      · <a href="404.html">404-sida</a>
     </small>
   </div>
 </footer>
 
-<!-- Mall för bok-kort -->
 <template id="card-tpl">
   <article class="card">
     <div class="cover-wrap skeleton">
       <img
-      alt=""
-      loading="lazy"
-      src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
-    />
-
+        alt=""
+        loading="lazy"
+        src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
+      />
     </div>
     <div class="card-body">
       <h3 class="title"></h3>
@@ -107,7 +102,6 @@
   </article>
 </template>
 
-<!-- Vår appkod (lägg i samma mapp) -->
 <script src="js/app.js" type="module" defer></script>
 </body>
 </html>

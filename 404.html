@@ -1,62 +1,23 @@
 <!doctype html>
-<html lang="en">
-
+<html lang="sv">
 <head>
   <meta charset="utf-8">
-  <title>Page Not Found</title>
+  <title>Sidan kunde inte hittas</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    * {
-      line-height: 1.2;
-      margin: 0;
-    }
-
-    html {
-      color: #888;
-      display: table;
-      font-family: sans-serif;
-      height: 100%;
-      text-align: center;
-      width: 100%;
-    }
-
-    body {
-      display: table-cell;
-      vertical-align: middle;
-      margin: 2em auto;
-    }
-
-    h1 {
-      color: #555;
-      font-size: 2em;
-      font-weight: 400;
-    }
-
-    p {
-      margin: 0 auto;
-      width: 280px;
-    }
-
-    @media only screen and (max-width: 280px) {
-
-      body,
-      p {
-        width: 95%;
-      }
-
-      h1 {
-        font-size: 1.5em;
-        margin: 0 0 0.3em;
-      }
-
-    }
+    * { line-height:1.4; margin:0; }
+    html, body { height:100%; }
+    html { color:#6f655c; display:table; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; width:100%; text-align:center; }
+    body { display:table-cell; vertical-align:middle; margin:2em auto; padding:0 1rem; }
+    h1 { color:#2f2a26; font-size:2rem; font-weight:600; margin-bottom:.5rem; }
+    p { max-width:32rem; margin:0 auto 1rem; }
+    a { color:#a08874; text-decoration:none; font-weight:600; }
+    a:hover { text-decoration:underline; }
   </style>
 </head>
-
 <body>
-  <h1>Page Not Found</h1>
-  <p>Sorry, but the page you were trying to view does not exist.</p>
+<h1>404 – Sidan kunde inte hittas</h1>
+<p>Tyvärr finns inte sidan du försökte öppna.</p>
+<p><a href="index.html">Till startsidan</a></p>
 </body>
-
 </html>
-<!-- IE needs 512+ bytes: https://docs.microsoft.com/archive/blogs/ieinternals/friendly-http-error-pages -->
