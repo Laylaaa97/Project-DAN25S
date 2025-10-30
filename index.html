@@ -13,43 +13,74 @@
   <meta name="description" content="Sök böcker via Open Library. Snygg beige design, vanilla JS." />
 </head>
 <body>
-<noscript>
-  <div style="background:#fff3cd;color:#664d03;padding:12px;border-bottom:1px solid #ffe69c;text-align:center;">
-    Den här sidan kräver JavaScript för att fungera. Aktivera JavaScript och ladda om.
-  </div>
-</noscript>
-
-<header class="site-header" role="banner">
+<header class="site-header">
   <div class="wrap">
     <h1 class="brand"><span>Beige</span> Book Explorer</h1>
     <p class="tagline">clean girl • it girl • pinterest vibes</p>
   </div>
 </header>
 
-<main class="wrap" role="main">
-  <section class="search-card" aria-labelledby="search-title">
-    <h2 id="search-title" class="sr-only">Sök böcker</h2>
+<main class="wrap">
+  <section class="search-card">
     <form id="search-form" autocomplete="off">
-      <label class="field" for="q">
+      <label class="field">
         <span>Sök bok / författare</span>
         <input id="q" type="search" placeholder="t.ex. harry potter, sally rooney, data science…" />
       </label>
 
+      <!-- Basfilter -->
       <div class="filters">
-        <label class="field-inline" for="yearMin">
+        <label class="field-inline">
           <span>Från år</span>
           <input id="yearMin" type="number" inputmode="numeric" placeholder="1900" min="0" />
         </label>
-        <label class="field-inline" for="yearMax">
+        <label class="field-inline">
           <span>Till år</span>
           <input id="yearMax" type="number" inputmode="numeric" placeholder="2025" min="0" />
         </label>
-        <label class="field-inline" for="sort">
-          <span>Sortera</span>
-          <select id="sort" disabled>
-            <option value="relevance" selected>Relevans</option>
+        <label class="field-inline">
+          <span>Språk</span>
+          <select id="language">
+            <option value="">Alla</option>
+            <option value="swe">Svenska</option>
+            <option value="eng">Engelska</option>
+            <option value="ger">Tyska</option>
+            <option value="spa">Spanska</option>
+            <option value="fre">Franska</option>
           </select>
         </label>
+        <label class="field-inline">
+          <span>Sortera</span>
+          <select id="sort">
+            <option value="relevance">Relevans</option>
+            <option value="new">Nyast först</option>
+            <option value="old">Äldst först</option>
+          </select>
+        </label>
+      </div>
+
+      <!-- Snabba toggles -->
+      <div class="quick-toggles">
+        <label class="toggle">
+          <input id="onlyEbooks" type="checkbox" />
+          <span>Bara e-bok</span>
+        </label>
+        <label class="toggle">
+          <input id="onlyCovers" type="checkbox" />
+          <span>Endast med omslag</span>
+        </label>
+      </div>
+
+      <!-- Kategorier (enkla ämnen) -->
+      <div class="categories" id="categories" aria-label="Kategorier">
+        <button type="button" class="chip" data-subject="romance">Romance</button>
+        <button type="button" class="chip" data-subject="fantasy">Fantasy</button>
+        <button type="button" class="chip" data-subject="science fiction">Sci-Fi</button>
+        <button type="button" class="chip" data-subject="mystery">Mystery</button>
+        <button type="button" class="chip" data-subject="history">History</button>
+        <button type="button" class="chip" data-subject="biography">Biography</button>
+        <button type="button" class="chip" data-subject="young adult">YA</button>
+        <button type="button" class="chip" data-subject="poetry">Poetry</button>
       </div>
 
       <div class="actions">
@@ -57,15 +88,14 @@
         <button class="btn btn-ghost" type="button" id="clearBtn">Rensa</button>
       </div>
 
-      <div class="recent" id="recent" aria-live="polite"></div>
+      <div class="recent" id="recent"></div>
     </form>
   </section>
 
   <section aria-live="polite" class="results">
     <div id="stats" class="stats"></div>
     <div id="grid" class="grid"></div>
-
-    <div id="pager" class="pager hidden" role="navigation" aria-label="Sidbläddring">
+    <div id="pager" class="pager hidden">
       <button id="prev" class="btn" disabled>Föregående</button>
       <span id="pageLabel" class="page-label">Sida 1</span>
       <button id="next" class="btn">Nästa</button>
@@ -73,14 +103,9 @@
   </section>
 </main>
 
-<footer class="site-footer" role="contentinfo">
+<footer class="site-footer">
   <div class="wrap">
-    <small>
-      Data från
-      <a href="https://openlibrary.org/" target="_blank" rel="noreferrer noopener">Open Library</a>.
-      Byggt i Webstorm ✌️
-      · <a href="404.html"> Error sida</a>
-    </small>
+    <small>Data från <a href="https://openlibrary.org/" target="_blank" rel="noreferrer noopener">Open Library</a>. Byggt i vanilla JS ✌️</small>
   </div>
 </footer>
 
