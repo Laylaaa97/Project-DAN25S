@@ -1,5 +1,3 @@
-/* styles.css — Beige Book Explorer
-
 /* Färgtema & tokens */
 :root {
   --bg: #f6f0e9;        /* varm beige bakgrund */
@@ -130,7 +128,7 @@ body {
   background: transparent;
 }
 
-/* Stats + Grid */
+/* Stats och Grid */
 .stats {
   color: var(--muted);
   font-size: 14px;
@@ -235,14 +233,12 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .skeleton::after { animation: none; }
 }
-/* ...resten av din befintliga CSS oförändrad... */
 
-/* Quick toggles (checkboxar men cute) */
 .quick-toggles { display: flex; gap: .75rem; flex-wrap: wrap; margin: .6rem 0 .2rem; }
 .toggle { display: inline-flex; align-items: center; gap: .5rem; padding: .45rem .75rem; border: 1px solid var(--line); border-radius: 999px; background: #fff; }
 .toggle input { accent-color: var(--accent-2); }
 
-/* Kategori-chips */
+/* Kategori chips */
 .categories { display: flex; flex-wrap: wrap; gap: .5rem; margin: .6rem 0 .2rem; }
 .categories .chip {
   font-size: .9rem; padding: .45rem .85rem; border-radius: 999px;
@@ -253,4 +249,3 @@ body {
   background: var(--accent); color: #fff; border-color: var(--accent);
 }
 
-/* ...resten (grid, cards, etc.) samma som tidigare... */
