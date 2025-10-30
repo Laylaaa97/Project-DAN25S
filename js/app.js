@@ -1,5 +1,3 @@
-// Beige Book Explorer – app.js
-// Enkel, robust Open Library-sök med filter, paging och fallback-omslag.
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
@@ -31,7 +29,7 @@ const STATE = {
   docs: [],
 };
 
-// ——— Helpers ———
+// Helpers
 function saveRecent(term) {
   if (!term) return;
   const key = 'bbe_recent';
@@ -65,14 +63,12 @@ function escapeHtml(s) {
 
 function getCoverUrl(doc, size = 'M') {
   if (doc.cover_i) return `https://covers.openlibrary.org/b/id/${doc.cover_i}-${size}.jpg`;
-  // Fallback: generera ett enkelt omslag med canvas (initialer)
   const title = (doc.title || 'Bok').trim();
   const initials = title.split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase() || '').join('');
   const canvas = document.createElement('canvas');
   canvas.width = 400; canvas.height = 600;
   const ctx = canvas.getContext('2d');
 
-  // neutral beige bakgrund
   ctx.fillStyle = '#efe8df';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -98,7 +94,6 @@ function docToMeta(doc) {
 }
 
 function buildWorkUrl(doc) {
-  // Prioritera work key, annars edition key
   if (doc.key) return `https://openlibrary.org${doc.key}`;
   if (doc.edition_key && doc.edition_key.length) {
     return `https://openlibrary.org/books/${doc.edition_key[0]}`;
@@ -121,12 +116,11 @@ function applyClientFilters(docs) {
     arr = arr.filter(d => (d.language || []).includes(lang));
   }
 
-  // Bara e-böcker (har fulltext/eBook)
+  // Bara e-böcker
   if (onlyEbooks.checked) {
     arr = arr.filter(d => d.has_fulltext === true || d.ebook_access === 'public');
   }
 
-  // Endast med omslag
   if (onlyCovers.checked) {
     arr = arr.filter(d => !!d.cover_i);
   }
@@ -185,18 +179,16 @@ function updateStats(totalFound, showingCount) {
 function updatePager() {
   pageLabel.textContent = `Sida ${STATE.page}`;
   prevBtn.disabled = STATE.page <= 1;
-  // Open Library ger upp till 100 sidor; här låter vi användaren bläddra tills inget mer kommer
   nextBtn.disabled = STATE.docs.length < STATE.pageSize;
   pager.classList.remove('hidden');
 }
 
-// ——— API ———
+// API
 async function fetchPage() {
   const base = 'https://openlibrary.org/search.json';
   const params = new URLSearchParams();
   const q = qInput.value.trim();
   if (q) params.set('q', q);
-  // be om de fält vi använder för att spara bytes
   params.set('fields', [
     'key',
     'title',
@@ -228,7 +220,6 @@ async function runSearch() {
     STATE.lastResponseTotal = data.numFound ?? 0;
     STATE.docs = Array.isArray(data.docs) ? data.docs : [];
 
-    // Klient-filtrera & rendera
     const filtered = applyClientFilters(STATE.docs);
     render(filtered);
     updateStats(STATE.lastResponseTotal, filtered.length);
@@ -243,7 +234,6 @@ async function runSearch() {
   }
 }
 
-// ——— Event wiring ———
 form.addEventListener('submit', (e) => {
   e.preventDefault();
   STATE.page = 1;
@@ -276,7 +266,7 @@ nextBtn.addEventListener('click', () => {
   runSearch();
 });
 
-// Kategorichips
+// Kategori
 $('#categories').addEventListener('click', (e) => {
   const btn = e.target.closest('[data-subject]');
   if (!btn) return;
@@ -287,5 +277,4 @@ $('#categories').addEventListener('click', (e) => {
   runSearch();
 });
 
-// Init
 renderRecent();
